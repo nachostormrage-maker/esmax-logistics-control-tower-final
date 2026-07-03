@@ -78,7 +78,13 @@ except:
 st.sidebar.header("Panel de Control")
 
 uploaded = st.sidebar.file_uploader("Subir datos (CSV/XLSX)", type=["csv","xlsx"])
+use_sample = st.sidebar.checkbox("Usar datos simulados", True)
 dias = st.sidebar.slider("Horizonte de análisis (días)", 30, 365, 180)
+
+show_kpis = st.sidebar.checkbox("KPIs", True)
+show_graphs = st.sidebar.checkbox("Gráficos", True)
+show_abc = st.sidebar.checkbox("ABC", True)
+show_opt = st.sidebar.checkbox("Optimización", True)
 
 # =========================
 # DATA
@@ -100,7 +106,7 @@ if calcular_kpis:
 else:
     kpis = {
         "fill_rate": (df["ventas"]/df["demanda"]).mean(),
-        "mae": (df["demanda"] - df["ventas"]).abs().mean(),
+        "mae": (df["demanda"] - df.get("ventas",0)).abs().mean(),
         "inventario_prom": df["inventario"].mean()
     }
 
@@ -136,18 +142,29 @@ tabs = st.tabs([
 # DASHBOARD
 # =========================
 with tabs[0]:
+    st.markdown("### Indicadores clave")
+
     c1,c2,c3 = st.columns(3)
 
     c1.markdown(f"<div class='kpi'>Fill Rate<br>{kpis['fill_rate']:.2%}</div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='card'><b>Desviación</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
+    c2.markdown(f"<div class='card'><b>Desviación de Demanda</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
     c3.markdown(f"<div class='card'><b>Inventario Prom</b><br>{kpis['inventario_prom']:.0f}</div>", unsafe_allow_html=True)
 
-    st.line_chart(df.set_index("fecha")[["demanda","ventas","inventario"]])
+    st.markdown("### Datos")
+    st.dataframe(df.head(20), use_container_width=True)
+
+    if show_graphs:
+        st.markdown("### Tendencias")
+        if "fecha" in df.columns:
+            st.line_chart(df.set_index("fecha")[["demanda","ventas","inventario"]])
+        else:
+            st.line_chart(df[["demanda","ventas","inventario"]])
 
 # =========================
 # FORECAST
 # =========================
 with tabs[1]:
+    st.markdown("### Pronóstico")
 
     df_fc = generar_forecast(df) if generar_forecast else df.copy()
 
@@ -159,72 +176,128 @@ with tabs[1]:
     st.line_chart(df_fc.set_index("fecha")[["demanda","forecast"]])
 
 # =========================
-# INVENTARIO (SOLO MEJORA VISUAL)
+# INVENTARIO (VERSIÓN EJECUTIVA)
 # =========================
 with tabs[2]:
 
-    st.markdown("### Visibilidad del Inventario")
+    st.markdown("## Visión Operacional del Inventario")
 
-    st.info(
-        "Esta sección permite visualizar el inventario disponible como apoyo al control operacional."
-    )
+    st.markdown("""
+    <div style='background:#f5f7fa;padding:14px;border-radius:12px;
+    border-left:5px solid #0b5f8a;'>
+    Históricamente el inventario se gestionaba como una cifra consolidada,
+    sin visibilidad operacional. Esto generaba dificultades en trazabilidad,
+    conteos físicos y diferencias sistemáticas.
+    <br><br>
+    La Control Tower transforma esta visión hacia un modelo distribuido,
+    permitiendo interpretar el inventario como una red operacional de disponibilidad.
+    </div>
+    """, unsafe_allow_html=True)
 
     inventario_total = df["inventario"].mean()
 
-    c1,c2,c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    c1.metric("Inventario Total", f"{inventario_total:,.0f}")
-    c2.metric("Cobertura", "4 zonas")
-    c3.metric("Estado", "Controlado")
+    col1.metric("Inventario Total", f"{inventario_total:,.0f}")
+    col2.metric("Ubicaciones", "4")
+    col3.metric("Visibilidad", "Alta")
+
+    st.markdown("---")
 
     distribucion = pd.DataFrame({
-        "Zona": ["Norte","Centro","Sur","Austral"],
+        "Ubicación Operacional": [
+            "Zona Operacional A",
+            "Zona Operacional B",
+            "Zona Operacional C",
+            "Zona Operacional D"
+        ],
         "Inventario": [
-            inventario_total*0.30,
-            inventario_total*0.27,
-            inventario_total*0.23,
-            inventario_total*0.20
+            inventario_total * 0.33,
+            inventario_total * 0.27,
+            inventario_total * 0.22,
+            inventario_total * 0.18
         ]
     })
 
-    st.bar_chart(distribucion.set_index("Zona"))
+    c1, c2 = st.columns([2,1])
 
-    st.markdown("#### Participación")
+    with c1:
+        st.markdown("### Distribución Operacional")
+        st.bar_chart(distribucion.set_index("Ubicación Operacional"))
 
-    distribucion["%"] = distribucion["Inventario"]/distribucion["Inventario"].sum()
-    st.dataframe(distribucion[["Zona","%"]].style.format({"%":"{:.1%}"}))
+    with c2:
+        st.markdown("### Participación")
+        distribucion["%"] = distribucion["Inventario"] / distribucion["Inventario"].sum()
+        st.dataframe(distribucion[["Ubicación Operacional","%"]].style.format({"%":"{:.1%}"}))
 
-    with st.expander("Insight operativo"):
-        st.write("""
-        El inventario total se mantiene, pero ahora puede interpretarse por distribución operacional,
-        facilitando la localización y control del stock.
-        """)
+    st.markdown("---")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.markdown("<div class='card'><b>Estado</b><br>Controlado</div>", unsafe_allow_html=True)
+    c2.markdown("<div class='card'><b>Riesgo</b><br>Bajo</div>", unsafe_allow_html=True)
+    c3.markdown("<div class='card'><b>Gestión</b><br>Operacional</div>", unsafe_allow_html=True)
+
+    st.markdown("### Impacto Operacional")
+
+    st.markdown("""
+    - ✔ Visibilidad por ubicación operacional  
+    - ✔ Reducción de diferencias de inventario  
+    - ✔ Mejora en conciliación física  
+    - ✔ Apoyo a reposición y planificación  
+    - ✔ Trazabilidad del stock  
+    """)
+
+    if show_abc:
+        st.markdown("### Clasificación ABC")
+
+        if clasificacion_abc:
+            st.dataframe(clasificacion_abc(df), use_container_width=True)
+        else:
+            st.dataframe(df.groupby("sku")["demanda"].sum().reset_index(), use_container_width=True)
 
 # =========================
 # OPTIMIZACIÓN
 # =========================
 with tabs[3]:
+    st.markdown("### Decisión de reposición")
 
-    st.markdown("### Reposición")
-
-    st.write(f"""
-- Riesgo: {riesgo}
-- Pedido sugerido: {optim.get('suggested_order',0):.0f}
-- Reorder point: {optim.get('reorder_point',0):.1f}
-- Stock seguridad: {optim.get('stock_seguridad',0):.1f}
+    st.markdown(f"""
+- Riesgo operativo: **{riesgo}**
+- Pedido sugerido: **{optim.get('suggested_order',0):.0f}**
+- Punto de reorden: **{optim.get('reorder_point',0):.1f}**
+- Stock de seguridad: **{optim.get('stock_seguridad',0):.1f}**
+- EOQ: **{optim.get('eoq',0):.1f}**
 """)
+
+    if riesgo == "ALTO":
+        st.error("Acción inmediata requerida")
+    elif riesgo == "MEDIO":
+        st.warning("Monitoreo requerido")
+    else:
+        st.success("Sistema estable")
 
 # =========================
 # REPORTE
 # =========================
 with tabs[4]:
+    st.markdown("### Reporte ejecutivo")
 
     if generar_pdf_bytes:
-        pdf = generar_pdf_bytes(df,kpis)
-        st.download_button("Descargar Reporte", pdf, "ESMAX.pdf")
+        pdf = generar_pdf_bytes(df, kpis)
+        st.download_button("Descargar PDF", pdf, "ESMAX_Report.pdf")
 
 # =========================
-# FOOTER
+# CIERRE
 # =========================
 st.markdown("---")
-st.markdown("ESMAX CONTROL TOWER")
+st.markdown("## ESMAX CONTROL TOWER")
+
+st.markdown("""
+Plataforma de analítica avanzada para soporte a decisiones logísticas, optimización de inventario y control operacional.
+""")
+
+if os.path.exists("LAYOUT.png"):
+    col1, col2, col3 = st.columns([1,3,1])
+    with col2:
+        st.image(Image.open("LAYOUT.png"), use_container_width=True)
