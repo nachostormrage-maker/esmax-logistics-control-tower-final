@@ -176,23 +176,33 @@ with tabs[1]:
     st.line_chart(df_fc.set_index("fecha")[["demanda","forecast"]])
 
 # =========================
-# INVENTARIO (MEJORADO)
+# INVENTARIO (VERSIÓN EJECUTIVA)
 # =========================
 with tabs[2]:
 
-    st.markdown("## Visibilidad Operacional del Inventario")
+    st.markdown("## Visión Operacional del Inventario")
 
-    st.info("""
-Históricamente la operación contaba únicamente con un inventario consolidado,
-sin visibilidad por ubicación, lo que dificultaba la localización del stock,
-los conteos físicos y la detección de diferencias sistemáticas.
-
-La Control Tower habilita una vista operacional del inventario,
-permitiendo interpretar su distribución como soporte a la gestión logística,
-conciliación y toma de decisiones.
-""")
+    st.markdown("""
+    <div style='background:#f5f7fa;padding:14px;border-radius:12px;
+    border-left:5px solid #0b5f8a;'>
+    Históricamente el inventario se gestionaba como una cifra consolidada,
+    sin visibilidad operacional. Esto generaba dificultades en trazabilidad,
+    conteos físicos y diferencias sistemáticas.
+    <br><br>
+    La Control Tower transforma esta visión hacia un modelo distribuido,
+    permitiendo interpretar el inventario como una red operacional de disponibilidad.
+    </div>
+    """, unsafe_allow_html=True)
 
     inventario_total = df["inventario"].mean()
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Inventario Total", f"{inventario_total:,.0f}")
+    col2.metric("Ubicaciones", "4")
+    col3.metric("Visibilidad", "Alta")
+
+    st.markdown("---")
 
     distribucion = pd.DataFrame({
         "Ubicación Operacional": [
@@ -202,45 +212,49 @@ conciliación y toma de decisiones.
             "Zona Operacional D"
         ],
         "Inventario": [
-            inventario_total * 0.30,
+            inventario_total * 0.33,
             inventario_total * 0.27,
-            inventario_total * 0.23,
-            inventario_total * 0.20
+            inventario_total * 0.22,
+            inventario_total * 0.18
         ]
     })
 
-    st.markdown("### Distribución operacional del inventario")
-    st.bar_chart(distribucion.set_index("Ubicación Operacional"))
+    c1, c2 = st.columns([2,1])
 
-    st.metric("Inventario Total Disponible", f"{inventario_total:,.0f} unidades")
+    with c1:
+        st.markdown("### Distribución Operacional")
+        st.bar_chart(distribucion.set_index("Ubicación Operacional"))
+
+    with c2:
+        st.markdown("### Participación")
+        distribucion["%"] = distribucion["Inventario"] / distribucion["Inventario"].sum()
+        st.dataframe(distribucion[["Ubicación Operacional","%"]].style.format({"%":"{:.1%}"}))
 
     st.markdown("---")
 
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
 
-    with c1:
-        st.markdown("### Beneficios Operacionales")
-        st.markdown("""
-- ✔ Visibilidad del inventario por ubicación operacional  
-- ✔ Mejora en conteos físicos y conciliación  
-- ✔ Reducción de diferencias sistemáticas  
-- ✔ Mejor trazabilidad del stock  
-- ✔ Soporte a decisiones de reposición  
-""")
+    c1.markdown("<div class='card'><b>Estado</b><br>Controlado</div>", unsafe_allow_html=True)
+    c2.markdown("<div class='card'><b>Riesgo</b><br>Bajo</div>", unsafe_allow_html=True)
+    c3.markdown("<div class='card'><b>Gestión</b><br>Operacional</div>", unsafe_allow_html=True)
 
-    with c2:
-        st.markdown("### Estado del Sistema")
-        st.metric("Ubicaciones visibles", "4")
-        st.metric("Tipo de control", "Operacional")
-        st.metric("Nivel de visibilidad", "Alto")
+    st.markdown("### Impacto Operacional")
+
+    st.markdown("""
+    - ✔ Visibilidad por ubicación operacional  
+    - ✔ Reducción de diferencias de inventario  
+    - ✔ Mejora en conciliación física  
+    - ✔ Apoyo a reposición y planificación  
+    - ✔ Trazabilidad del stock  
+    """)
 
     if show_abc:
         st.markdown("### Clasificación ABC")
 
         if clasificacion_abc:
-            st.dataframe(clasificacion_abc(df))
+            st.dataframe(clasificacion_abc(df), use_container_width=True)
         else:
-            st.dataframe(df.groupby("sku")["demanda"].sum().reset_index())
+            st.dataframe(df.groupby("sku")["demanda"].sum().reset_index(), use_container_width=True)
 
 # =========================
 # OPTIMIZACIÓN
@@ -259,7 +273,7 @@ with tabs[3]:
     if riesgo == "ALTO":
         st.error("Acción inmediata requerida")
     elif riesgo == "MEDIO":
-        st.warning("Monitorear niveles de inventario")
+        st.warning("Monitoreo requerido")
     else:
         st.success("Sistema estable")
 
@@ -274,13 +288,13 @@ with tabs[4]:
         st.download_button("Descargar PDF", pdf, "ESMAX_Report.pdf")
 
 # =========================
-# CIERRE CORPORATIVO
+# CIERRE
 # =========================
 st.markdown("---")
 st.markdown("## ESMAX CONTROL TOWER")
 
 st.markdown("""
-Plataforma de analítica avanzada para optimización de inventario, predicción de demanda y soporte a decisiones operacionales.
+Plataforma de analítica avanzada para soporte a decisiones logísticas, optimización de inventario y control operacional.
 """)
 
 if os.path.exists("LAYOUT.png"):
